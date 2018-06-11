@@ -111,7 +111,6 @@ impl<T> Doc<T> {
     pub fn maybe_braces(self, on: bool) -> Self {
         if on {self.braces()} else {self}
     }
-
     pub fn maybe_quotes(self, on: bool) -> Self {
         if on {self.quotes()} else {self}
     }
@@ -131,10 +130,43 @@ impl<T> Doc<T> {
     pub fn beside(mut self, space: bool, other: Doc<T>) -> Self {
         match *self.0 {
             DocBase::Beside(_, ref mut rest) => {
-                rest.push((space, other));
+                match *other.0 {
+                    DocBase::Beside(_, _) => {
+                        let other = *other.0;
+                        match other {
+                            DocBase::Beside(o_first, o_rest) => {
+                                rest.push((space, o_first));
+                                rest.extend(o_rest);
+                            }
+                            _ => unreachable!(),
+                        }
+                    }
+                    _ => {
+                        rest.push((space, other));
+                    }
+                }
             }
+
             _ => {
-                self = Doc(Box::new(DocBase::Beside(self, vec![(space, other)])))
+                match *other.0 {
+                    DocBase::Beside(_, _) => {
+                        let other = *other.0;
+                        match other {
+                            DocBase::Beside(o_first, o_rest) => {
+                                let mut rest = Vec::with_capacity(o_rest.len() + 1);
+                                rest.push((space, o_first));
+                                rest.extend(o_rest);
+                                self = Doc(Box::new(DocBase::Beside(self, rest)));
+                            }
+                            _ => {
+                                unreachable!();
+                            }
+                        }
+                    }
+                    _ => {
+                        self = Doc(Box::new(DocBase::Beside(self, vec![(space, other)])))
+                    }
+                }
             }
         }
         self
